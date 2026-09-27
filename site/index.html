@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Only on Vision Pro</title>
+<meta name="description" content="Every app that runs only on Apple Vision Pro, searchable and sorted by category. Updated daily from the US App Store.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Only on Vision Pro">
+<meta property="og:title" content="Only on Vision Pro">
+<meta property="og:description" content="Every app that runs only on Apple Vision Pro. Search, browse by category, tap to open in the App Store. Updated daily.">
+<meta property="og:image" content="https://raw.githubusercontent.com/claytondb/only-on-vision-pro/main/site/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#E7E9ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0E11" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..800&display=swap">
+<link rel="preload" href="data/apps.json" as="fetch" crossorigin>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+:root{
+  --ground:#E7E9ED;
+  --env-warm:rgba(247,236,222,.95);
+  --env-cool:rgba(196,208,222,.9);
+  --env-deep:rgba(214,219,228,.9);
+  --glass:rgba(255,255,255,.62);
+  --glass-strong:rgba(255,255,255,.86);
+  --glass-edge:rgba(255,255,255,.75);
+  --ink:#15171C;
+  --ink-2:#545A65;
+  --ink-3:#848A95;
+  --hair:rgba(21,24,32,.09);
+  --shadow:0 1px 1px rgba(20,24,32,.04),0 10px 30px -12px rgba(20,24,32,.22);
+  --chip-on:#15171C;
+  --chip-on-ink:#FFFFFF;
+  --tab:#E8622A;          /* the orange pull tab on the Vision Pro band */
+  --star:#15171C;
+  --icon-fill:#D9DDE3;
+  --display:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --text:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r-window:28px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0C0E11;
+    --env-warm:rgba(58,46,36,.55);
+    --env-cool:rgba(24,38,54,.7);
+    --env-deep:rgba(18,20,26,.9);
+    --glass:rgba(44,48,56,.52);
+    --glass-strong:rgba(64,69,79,.72);
+    --glass-edge:rgba(255,255,255,.12);
+    --ink:#F3F4F6;
+    --ink-2:#AAB0BA;
+    --ink-3:#7A818C;
+    --hair:rgba(255,255,255,.08);
+    --shadow:0 1px 1px rgba(0,0,0,.3),0 14px 34px -14px rgba(0,0,0,.7);
+    --chip-on:#F3F4F6;
+    --chip-on-ink:#0C0E11;
+    --tab:#FF7A45;
+    --star:#F3F4F6;
+    --icon-fill:#2A2E36;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0C0E11;
+  --env-warm:rgba(58,46,36,.55);
+  --env-cool:rgba(24,38,54,.7);
+  --env-deep:rgba(18,20,26,.9);
+  --glass:rgba(44,48,56,.52);
+  --glass-strong:rgba(64,69,79,.72);
+  --glass-edge:rgba(255,255,255,.12);
+  --ink:#F3F4F6;
+  --ink-2:#AAB0BA;
+  --ink-3:#7A818C;
+  --hair:rgba(255,255,255,.08);
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 14px 34px -14px rgba(0,0,0,.7);
+  --chip-on:#F3F4F6;
+  --chip-on-ink:#0C0E11;
+  --tab:#FF7A45;
+  --star:#F3F4F6;
+  --icon-fill:#2A2E36;
+}
+
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font:15px/1.4 var(--text);
+  -webkit-font-smoothing:antialiased;
+}
+/* The "room" behind the glass: soft daylight and shadow, like passthrough */
+.env{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--ground)}
+.env::before,.env::after{content:"";position:absolute;border-radius:50%;filter:blur(60px)}
+.env::before{width:90vmax;height:70vmax;left:-30vmax;top:-30vmax;background:var(--env-warm)}
+.env::after{width:80vmax;height:80vmax;right:-35vmax;bottom:-40vmax;background:var(--env-cool)}
+
+.page{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-block:calc(20px + env(safe-area-inset-top)) calc(40px + env(safe-area-inset-bottom))}
+@media (min-width:720px){.page{padding-inline:28px;padding-block:36px 56px}}
+.updated{margin:10px 0 0;font-size:12px;letter-spacing:.02em;color:var(--ink-3);display:flex;align-items:center;gap:7px}
+.updated i{width:7px;height:7px;border-radius:50%;background:#34C759;box-shadow:0 0 0 3px color-mix(in srgb,#34C759 22%,transparent)}
+.foot a{color:var(--ink-2);text-underline-offset:2px}
+.chip.newchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--tab)}
+.chip.newchip[aria-pressed="true"]::before{background:var(--tab)}
+/* loading placeholders */
+.skel{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:12px 14px}
+.skel .ic{animation:pulse 1.4s ease-in-out infinite}
+.skel .l{height:12px;border-radius:6px;background:var(--hair);margin:5px 0}
+.skel .l.w1{width:62%}.skel .l.w2{width:84%}.skel .l.w3{width:40%}
+@keyframes pulse{50%{opacity:.55}}
+.loaderr{padding:28px 20px;text-align:center;color:var(--ink-2)}
+.loaderr button{margin-top:12px;height:38px;padding:0 16px;border:0;border-radius:19px;background:var(--chip-on);color:var(--chip-on-ink);font:600 14px var(--text);cursor:pointer}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;padding-block:6px 18px}
+.eyebrow{margin:0 0 10px;font:600 11px/1.2 var(--text);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.eyebrow i{width:18px;height:6px;border-radius:3px;background:var(--tab);display:inline-block}
+.wordmark{margin:0;font-family:var(--display);font-stretch:125%;font-weight:760;font-size:clamp(34px,10.2vw,68px);line-height:.98;letter-spacing:-.02em;text-wrap:balance}
+.wordmark span{display:block}
+.lede{margin:14px 0 0;max-width:34em;font-size:15.5px;line-height:1.45;color:var(--ink-2)}
+.lede strong{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+.tip{margin:8px 0 0;max-width:40em;font-size:13px;line-height:1.45;color:var(--ink-3)}
+.tip b{color:var(--ink-2);font-weight:600}
+
+/* floating round icons, arranged like the visionOS Home View */
+.honey{position:absolute;right:0;top:0;display:flex;flex-direction:column;align-items:center;pointer-events:auto}
+.honey .row{display:flex;gap:var(--hg)}
+.honey .row + .row{margin-top:calc(var(--hs) * -0.12)}
+.honey.sm{--hs:31px;--hg:5px;top:22px}
+.honey.lg{--hs:58px;--hg:10px;display:none;top:4px}
+@media (min-width:720px){.honey.sm{display:none}.honey.lg{display:flex}}
+@media (max-width:359px){.honey.sm{display:none}}
+.honey a{display:block;border-radius:50%;animation:float 7s ease-in-out infinite;animation-delay:calc(var(--k) * -0.9s)}
+.honey a:focus-visible{outline:2px solid var(--tab);outline-offset:3px}
+.honey .ic{--sz:var(--hs)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+/* ---------- Icons ---------- */
+.ic{
+  --sz:56px;display:block;width:var(--sz);height:var(--sz);flex:none;border-radius:50%;object-fit:cover;
+  background:var(--icon-fill);outline:.5px solid rgba(255,255,255,.28);outline-offset:-.5px;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 14px -6px rgba(0,0,0,.35);
+}
+
+/* ---------- Sticky control bar ---------- */
+.bar{
+  position:sticky;top:calc(env(safe-area-inset-top, 0px) + 8px);z-index:5;
+  margin-block:4px 10px;padding:10px;border-radius:24px;
+  background:var(--glass);-webkit-backdrop-filter:blur(26px) saturate(1.5);backdrop-filter:blur(26px) saturate(1.5);
+  box-shadow:var(--shadow),inset 0 0 0 1px var(--glass-edge);
+  display:grid;gap:10px;
+}
+.bar-row{display:flex;gap:8px;align-items:center}
+.search{flex:1;min-width:0;position:relative;display:flex;align-items:center}
+.search svg{position:absolute;left:13px;width:17px;height:17px;color:var(--ink-3);pointer-events:none}
+.search input{
+  width:100%;height:42px;border:0;border-radius:21px;padding:0 40px 0 38px;
+  background:var(--glass-strong);color:var(--ink);font:16px/1 var(--text);
+  box-shadow:inset 0 0 0 1px var(--hair);-webkit-appearance:none;appearance:none;
+}
+.search input::placeholder{color:var(--ink-3)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none}
+.search input:focus-visible{outline:2px solid var(--tab);outline-offset:1px}
+.clear{position:absolute;right:6px;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--ink-3);display:grid;place-items:center;cursor:pointer}
+.clear:hover{color:var(--ink)}
+.clear:focus-visible{outline:2px solid var(--tab)}
+.clear svg{width:16px;height:16px}
+.pick{
+  position:relative;flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 12px;border-radius:17px;
+  background:var(--glass);color:var(--ink);font:600 14px/1 var(--text);white-space:nowrap;
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:inset 0 0 0 1px var(--hair);
+}
+.pick svg{flex:none;width:14px;height:14px;color:var(--ink-2)}
+.pick .chev{width:11px;height:11px;color:var(--ink-3)}
+.pick select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;-webkit-appearance:none;appearance:none;border:0}
+.pick:focus-within{outline:2px solid var(--tab);outline-offset:1px}
+.pick:hover{background:var(--glass-strong)}
+
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  margin-inline:-10px;padding-inline:10px;scroll-padding-inline:10px;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 22px),transparent);
+          mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 22px),transparent)}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:none;height:34px;padding:0 13px;border:0;border-radius:17px;cursor:pointer;
+  background:var(--glass-strong);color:var(--ink);font:600 14px/34px var(--text);white-space:nowrap;
+  box-shadow:inset 0 0 0 1px var(--hair);display:flex;align-items:center;gap:6px;
+}
+.chip .n{font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);box-shadow:none}
+.chip[aria-pressed="true"] .n{color:var(--chip-on-ink);opacity:.62}
+.chip.zero{opacity:.42}
+.chip:focus-visible{outline:2px solid var(--tab);outline-offset:1px}
+.subs .chip{height:30px;line-height:30px;font-size:13px;padding:0 11px}
+
+/* ---------- Status row ---------- */
+.status{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;padding:4px 2px 12px}
+.ctrls{display:flex;gap:8px;margin-left:auto}
+.count{margin:0;font-size:14px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.count b{color:var(--ink);font-weight:650}
+
+/* ---------- The list window ---------- */
+.window{
+  border-radius:var(--r-window);padding:6px 0;
+  background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.4);backdrop-filter:blur(30px) saturate(1.4);
+  box-shadow:var(--shadow),inset 0 0 0 1px var(--glass-edge);
+  display:grid;grid-template-columns:1fr;column-gap:8px;
+}
+@media (min-width:760px){.window{grid-template-columns:1fr 1fr;padding:10px 8px}}
+@media (min-width:1100px){.window{grid-template-columns:1fr 1fr 1fr}}
+.app{
+  position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;
+  padding:12px 14px;color:inherit;text-decoration:none;border-radius:20px;
+  -webkit-tap-highlight-color:transparent;transition:background-color .15s ease;
+}
+.app::after{content:"";position:absolute;left:80px;right:14px;bottom:0;height:1px;background:var(--hair)}
+.app .ic{--sz:54px}
+.app:hover{background:var(--glass-strong)}
+.app:active{background:var(--glass-strong)}
+.app:focus-visible{outline:2px solid var(--tab);outline-offset:-2px}
+.app:hover::after,.app:focus-visible::after{opacity:0}
+.body{min-width:0;display:grid;gap:2px}
+.name{margin:0;font-size:16px;line-height:1.25;font-weight:620;letter-spacing:-.01em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.name mark{background:transparent;color:inherit;box-shadow:inset 0 -.38em 0 color-mix(in srgb,var(--tab) 32%,transparent)}
+.sub{margin:0;font-size:14px;line-height:1.3;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{margin:2px 0 0;display:flex;align-items:center;gap:5px;font-size:12px;line-height:1.2;color:var(--ink-3);white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.meta .dot{opacity:.6}
+.meta .stars{color:var(--ink-2)}
+.meta .new{color:var(--tab);font-weight:700;letter-spacing:.06em;font-size:11px}
+.meta .cat{overflow:hidden;text-overflow:ellipsis}
+.price{display:grid;justify-items:center;gap:3px}
+.pill{min-width:56px;height:30px;padding:0 11px;border-radius:15px;display:grid;place-items:center;
+  background:var(--glass-strong);box-shadow:inset 0 0 0 1px var(--hair);font:700 13.5px/1 var(--text);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.iap{font-size:9.5px;line-height:1;color:var(--ink-3);letter-spacing:.01em}
+
+.more{display:flex;justify-content:center;padding-top:18px}
+.more button{height:40px;padding:0 20px;border:0;border-radius:20px;background:var(--glass);color:var(--ink);font:600 14px var(--text);box-shadow:var(--shadow),inset 0 0 0 1px var(--glass-edge);cursor:pointer;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.more button:focus-visible{outline:2px solid var(--tab)}
+
+.empty{border-radius:var(--r-window);padding:36px 22px;text-align:center;background:var(--glass);box-shadow:var(--shadow),inset 0 0 0 1px var(--glass-edge);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px)}
+.empty h2{margin:0 0 6px;font:700 20px/1.2 var(--display);font-stretch:112%;text-wrap:balance}
+.empty p{margin:0 auto 16px;max-width:30em;color:var(--ink-2)}
+.empty .acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.empty button{height:38px;padding:0 16px;border:0;border-radius:19px;background:var(--chip-on);color:var(--chip-on-ink);font:600 14px var(--text);cursor:pointer}
+.empty button.ghost{background:var(--glass-strong);color:var(--ink);box-shadow:inset 0 0 0 1px var(--hair)}
+
+.foot{margin-top:34px;padding:0 4px;display:grid;gap:8px;max-width:46em;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
+.foot p{margin:0}
+.foot b{color:var(--ink-2);font-weight:600}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (prefers-reduced-motion: reduce){
+  .honey a,.skel .ic{animation:none}
+  .app{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="env" aria-hidden="true"></div>
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow"><i aria-hidden="true"></i>visionOS App Store · US</p>
+    <h1 class="wordmark"><span>Only on</span><span>Vision Pro</span></h1>
+    <nav class="honey sm" aria-label="Popular right now"></nav>
+    <nav class="honey lg" aria-label="Popular right now"></nav>
+    <p class="lede"><strong id="total">0</strong> apps you can’t get on iPhone, iPad or Mac. Tap any app to open it in the App Store.</p>
+    <p class="tip">On iPhone, tap <b>Get</b> on the app’s page and it installs on your Vision Pro the next time you use it.</p>
+    <p class="updated" id="updated"><i aria-hidden="true"></i><span>Updated daily from the US App Store</span></p>
+  </header>
+
+  <div class="bar" id="bar">
+    <div class="bar-row">
+      <label class="search" for="q">
+        <span class="sr">Search apps</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6"/><path d="m13 13 4.5 4.5"/></svg>
+        <input id="q" type="search" placeholder="Search apps" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button class="clear" id="clear" type="button" aria-label="Clear search" hidden><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1.8a8.2 8.2 0 1 0 0 16.4 8.2 8.2 0 0 0 0-16.4Zm3.3 10.4-1.1 1.1L10 11.1l-2.2 2.2-1.1-1.1L8.9 10 6.7 7.8l1.1-1.1L10 8.9l2.2-2.2 1.1 1.1L11.1 10l2.2 2.2Z"/></svg></button>
+      </label>
+    </div>
+    <div class="chips" id="cats" role="group" aria-label="Categories"></div>
+    <div class="chips subs" id="subs" role="group" aria-label="Game types" hidden></div>
+  </div>
+
+  <div class="status">
+    <p class="count" id="count" aria-live="polite"></p>
+    <div class="ctrls">
+      <label class="pick" for="sort">
+        <span class="sr">Sort by</span>
+        <svg class="lead" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v14M2.5 6.5 6 3l3.5 3.5M14 17V3m3.5 10.5L14 17l-3.5-3.5"/></svg>
+        <span id="sortLabel" aria-hidden="true">Popular</span>
+        <select id="sort">
+          <option value="match" hidden>Best match</option>
+          <option value="popular">Popular now</option>
+          <option value="newest">Newest</option>
+          <option value="updated">Recently updated</option>
+          <option value="name">Name (A–Z)</option>
+        </select>
+        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>
+      </label>
+      <label class="pick" for="price">
+        <span class="sr">Price</span>
+        <span id="priceLabel" aria-hidden="true">Any price</span>
+        <select id="price">
+          <option value="all">Any price</option>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>
+      </label>
+    </div>
+  </div>
+
+  <main class="window" id="list" aria-label="Apps" aria-busy="true"><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div><div class="skel" aria-hidden="true"><span class="ic"></span><div><div class="l w1"></div><div class="l w2"></div><div class="l w3"></div></div></div></main>
+  <div class="empty" id="empty" hidden>
+    <h2 id="emptyTitle">No apps match</h2>
+    <p id="emptyText"></p>
+    <div class="acts">
+      <button type="button" id="emptyClear">Clear search</button>
+      <button type="button" class="ghost" id="emptyAll" hidden>Search all categories</button>
+    </div>
+  </div>
+  <div class="more" id="more" hidden><button type="button" id="moreBtn">Show more apps</button></div>
+
+  <footer class="foot">
+    <p><b>What counts as “only on Vision Pro”.</b> Every app here has a US App Store listing that runs on Apple Vision Pro and nothing else. Apps that are also sold for iPhone, iPad, Mac or Apple TV are left out, including iPhone and iPad apps that happen to run on Vision Pro.</p>
+    <p><b>How the list stays current.</b> Every day an automated job reads Apple’s Vision Pro top charts (the US plus 12 other countries in rotation), the Vision Pro App Store’s own pages and every app from each Vision Pro developer, then checks each app against Apple’s catalog and its App Store page for the devices it supports. New Vision Pro–only apps are added and removed ones drop off. “Popular now” follows Apple’s US Vision Pro top charts, then the charts in 12 other countries; apps that aren’t charting anywhere come last, most recently updated first. Star ratings appear where the App Store shows them in its Vision Pro charts.</p>
+    <p id="stamp"></p>
+    <p>Independent directory, not affiliated with Apple. App names and icons belong to their developers. <a href="https://github.com/claytondb/only-on-vision-pro">Source and data on GitHub</a>.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const listEl = document.getElementById("list");
+  function fail() {
+    listEl.removeAttribute("aria-busy");
+    listEl.innerHTML = '<div class="loaderr"><p>The app list didn’t load. Check your connection and try again.</p><button type="button" id="retry">Try again</button></div>';
+    document.getElementById("retry").addEventListener("click", () => location.reload());
+  }
+  fetch("data/apps.json")
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(start, fail);
+
+function start(DATA) {
+  const APPS = DATA.apps;
+  const TODAY = new Date(DATA.meta.updated);
+  const PAGE = 40;
+  const fmt = new Intl.NumberFormat("en-US");
+  const $ = (id) => document.getElementById(id);
+  const els = {q:$("q"), clear:$("clear"), sort:$("sort"), cats:$("cats"), subs:$("subs"), count:$("count"),
+    list:$("list"), more:$("more"), moreBtn:$("moreBtn"), empty:$("empty"), total:$("total"), stamp:$("stamp")};
+
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "'");
+  // word-start matching: "nba" finds "NBA" but not "pinball"; CJK text falls back to substring
+  const words = (s) => " " + norm(s).replace(/['’]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim() + " ";
+  const CJK = /[぀-ヿ㐀-鿿가-힯]/;
+  const has = (hay, t) => CJK.test(t) ? hay.includes(t) : hay.includes(" " + t);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const slug = (s) => norm(s).replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const compact = (n) => n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/,"") + "M"
+                    : n >= 1e3 ? (n/1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/,"") + "K" : String(n);
+
+  // ---- prepare records ----
+  const NEW_MS = 30 * 864e5;
+  for (const a of APPS) {
+    a.rc = a.rc || 0; a.r = a.r || 0;
+    a.nn = norm(a.n);
+    a.nw = words(a.n);
+    a.dw = words(a.d);
+    a.sw = words(a.s);
+    a.hay = a.nw + a.dw + a.sw + words(a.c) + words(a.g) + words(a.x);
+    a.isNew = a.rel && (TODAY - new Date(a.rel + "T12:00:00Z")) <= NEW_MS;
+    a.pv = a.pv == null ? 0 : a.pv;
+  }
+
+  // ---- categories (fixed order by size) ----
+  const catCount = new Map();
+  for (const a of APPS) catCount.set(a.c, (catCount.get(a.c) || 0) + 1);
+  const CATS = [...catCount.keys()].sort((x, y) => catCount.get(y) - catCount.get(x) || x.localeCompare(y));
+  const subCount = new Map();
+  for (const a of APPS) if (a.c === "Games" && a.g) subCount.set(a.g, (subCount.get(a.g) || 0) + 1);
+  const SUBS = [...subCount.keys()].sort((x, y) => subCount.get(y) - subCount.get(x) || x.localeCompare(y));
+
+  // ---- state ----
+  const state = {q: "", cat: "All", sub: null, price: "all", sort: "popular", userSort: "popular", shown: PAGE};
+  try {
+    const saved = JSON.parse(localStorage.getItem("ovp-prefs") || "{}");
+    if (["popular","newest","updated","name"].includes(saved.sort)) { state.sort = state.userSort = saved.sort; }
+    if (["all","free","paid"].includes(saved.price)) state.price = saved.price;
+  } catch (e) {}
+  const fromHash = decodeURIComponent((location.hash || "").slice(1));
+  if (fromHash) {
+    const c = fromHash === "new" ? "New" : CATS.find(c => slug(c) === fromHash);
+    if (c) state.cat = c;
+  }
+  const savePrefs = () => { try { localStorage.setItem("ovp-prefs", JSON.stringify({sort: state.userSort, price: state.price})); } catch (e) {} };
+
+  // ---- icons ----
+  const icon = (a, lazy) => a.ic
+    ? `<img class="ic" src="icons/${a.id}.webp" alt="" width="56" height="56" decoding="async"${lazy ? ' loading="lazy"' : ""}>`
+    : `<span class="ic" aria-hidden="true"></span>`;
+
+  // ---- filtering, scoring, sorting ----
+  function tokens() { return words(state.q).trim().split(" ").filter(Boolean); }
+
+  function score(a, toks, whole) {
+    let s = 0;
+    const nw = a.nw.trim();
+    if (nw === whole) s += 200; else if (nw.startsWith(whole)) s += 90; else if (a.nw.includes(" " + whole)) s += 45;
+    for (const t of toks) {
+      if (a.nw.includes(" " + t + " ")) s += 16;          // whole word beats a prefix
+      if (nw.startsWith(t)) s += 30;
+      else if (has(a.nw, t)) s += 22;
+      else if (has(a.dw, t)) s += 8;
+      else if (has(a.sw, t)) s += 6;
+      else s += 1;
+    }
+    return s;
+  }
+
+  // "Popular now": chart position in the current view, then the overall popularity order
+  const popCmp = (x, y) => {
+    if (state.cat !== "All" && state.cat !== "New") {
+      if (state.sub) { const d = (x.rs || 999) - (y.rs || 999); if (d) return d; }
+      const d = (x.rg || 999) - (y.rg || 999); if (d) return d;
+    }
+    return x.pop - y.pop;
+  };
+  const SORTS = {
+    popular: (x, y) => popCmp(x, y) || x.nn.localeCompare(y.nn),
+    newest:  (x, y) => (y.rel || "").localeCompare(x.rel || "") || x.nn.localeCompare(y.nn),
+    updated: (x, y) => (y.upd || "").localeCompare(x.upd || "") || x.nn.localeCompare(y.nn),
+    name:    (x, y) => x.n.localeCompare(y.n, "en", {sensitivity: "base"}),
+    match:   (x, y) => y._s - x._s || popCmp(x, y),
+  };
+
+  const priceOk = (a) => state.price === "all" || (state.price === "free" ? a.pv === 0 : a.pv !== 0);
+
+  function compute() {
+    const toks = tokens();
+    const whole = toks.join(" ");
+    const base = [];
+    for (const a of APPS) {
+      if (!priceOk(a)) continue;
+      if (toks.length) {
+        let ok = true;
+        for (const t of toks) if (!has(a.hay, t)) { ok = false; break; }
+        if (!ok) continue;
+        a._s = score(a, toks, whole);
+      }
+      base.push(a);
+    }
+    const byCat = new Map(), bySub = new Map();
+    let newCount = 0;
+    for (const a of base) {
+      if (a.isNew) newCount++;
+      byCat.set(a.c, (byCat.get(a.c) || 0) + 1);
+      if (a.c === "Games" && a.g) bySub.set(a.g, (bySub.get(a.g) || 0) + 1);
+    }
+    let rows = base;
+    if (state.cat === "New") rows = rows.filter(a => a.isNew);
+    else if (state.cat !== "All") rows = rows.filter(a => a.c === state.cat);
+    if (state.cat === "Games" && state.sub) rows = rows.filter(a => a.g === state.sub);
+    rows.sort(SORTS[state.sort] || SORTS.popular);
+    return {rows, total: base.length, newCount, byCat, bySub, toks};
+  }
+
+  // ---- rendering ----
+  function chip(label, n, pressed, attrs) {
+    return `<button type="button" class="chip${n === 0 && !pressed ? " zero" : ""}" aria-pressed="${pressed}" ${attrs}>${esc(label)}<span class="n">${fmt.format(n)}</span></button>`;
+  }
+
+  function renderChips(r) {
+    let h = chip("All", r.total, state.cat === "All", 'data-cat="All"');
+    h += chip("New", r.newCount, state.cat === "New", 'data-cat="New" title="Released in the last 30 days"').replace('class="chip', 'class="chip newchip');
+    for (const c of CATS) h += chip(c, r.byCat.get(c) || 0, state.cat === c, `data-cat="${esc(c)}"`);
+    els.cats.innerHTML = h;
+    const showSubs = state.cat === "Games";
+    els.subs.hidden = !showSubs;
+    if (showSubs) {
+      const all = r.byCat.get("Games") || 0;
+      let s = chip("All games", all, !state.sub, 'data-sub=""');
+      for (const g of SUBS) s += chip(g, r.bySub.get(g) || 0, state.sub === g, `data-sub="${esc(g)}"`);
+      els.subs.innerHTML = s;
+    }
+  }
+
+  function highlight(a, toks) {
+    if (!toks.length || a.nn.length !== a.n.length) return esc(a.n);
+    const marks = [];
+    for (const t of toks) {
+      let i = a.nn.indexOf(t);
+      while (i > 0 && !CJK.test(t) && /[\p{L}\p{N}]/u.test(a.nn[i - 1])) i = a.nn.indexOf(t, i + 1);
+      if (i >= 0) marks.push([i, i + t.length]);
+    }
+    if (!marks.length) return esc(a.n);
+    marks.sort((x, y) => x[0] - y[0]);
+    let out = "", pos = 0;
+    for (const [s, e] of marks) {
+      if (s < pos) continue;
+      out += esc(a.n.slice(pos, s)) + "<mark>" + esc(a.n.slice(s, e)) + "</mark>";
+      pos = e;
+    }
+    return out + esc(a.n.slice(pos));
+  }
+
+  function row(a, toks) {
+    const where = (state.cat === "All" || state.cat === "New") ? a.c : (a.c === "Games" && a.g ? a.g : a.d);
+    const bits = [];
+    if (a.isNew) bits.push(`<span class="new">NEW</span>`);
+    bits.push(`<span class="cat">${esc(where)}</span>`);
+    if (a.rc > 0) bits.push(`<span class="stars" aria-label="Rated ${a.r.toFixed(1)} out of 5 from ${fmt.format(a.rc)} ratings">★ ${a.r.toFixed(1)} <span aria-hidden="true">(${compact(a.rc)})</span></span>`);
+    const meta = bits.join('<span class="dot" aria-hidden="true">·</span>');
+    const label = `${a.n}, ${a.p === "Free" ? "free" : a.p}. Opens in the App Store`;
+    return `<a class="app" href="${esc(a.u)}" target="_blank" rel="noopener" aria-label="${esc(label)}" title="${esc(a.n + " — " + a.d)}">`
+      + icon(a, true)
+      + `<span class="body"><span class="name">${highlight(a, toks)}</span><span class="sub">${esc(a.s)}</span><span class="meta">${meta}</span></span>`
+      + `<span class="price"><span class="pill">${esc(a.p)}</span>${a.iap ? '<span class="iap">In-App Purchases</span>' : ""}</span>`
+      + `</a>`;
+  }
+
+  let current = null;
+  function countText(r) {
+    const n = r.rows.length;
+    const noun = state.cat === "Games" ? (n === 1 ? "game" : "games") : (n === 1 ? "app" : "apps");
+    let where = "";
+    if (state.cat === "New") where = " released in the last 30 days";
+    else if (state.cat !== "All" && state.cat !== "Games") where = ` in ${state.cat}`;
+    if (state.cat === "Games" && state.sub) where = ` · ${state.sub}`;
+    const price = state.price === "free" ? " free" : state.price === "paid" ? " paid" : "";
+    const q = state.q.trim() ? ` matching “${esc(state.q.trim())}”` : "";
+    return `<b>${fmt.format(n)}</b>${price} ${noun}${esc(where)}${q}`;
+  }
+
+  function render(keepScroll) {
+    current = compute();
+    els.list.removeAttribute("aria-busy");
+    renderChips(current);
+    els.count.innerHTML = countText(current);
+    const rows = current.rows;
+    const slice = rows.slice(0, state.shown);
+    els.list.innerHTML = slice.map(a => row(a, current.toks)).join("");
+    els.list.hidden = rows.length === 0;
+    els.more.hidden = rows.length <= state.shown;
+    els.empty.hidden = rows.length !== 0;
+    if (!rows.length) {
+      const q = state.q.trim();
+      $("emptyTitle").textContent = q ? `No apps match “${q}”` : "No apps here";
+      $("emptyText").textContent = state.cat === "New"
+        ? "No new apps match right now. Try all categories."
+        : state.cat !== "All"
+        ? `Nothing in ${state.cat}${state.price !== "all" ? " at that price" : ""}. Try all categories or a shorter search.`
+        : `Try a shorter or different word${state.price !== "all" ? ", or show both free and paid apps" : ""}.`;
+      $("emptyClear").hidden = !q;
+      $("emptyAll").hidden = state.cat === "All" && state.price === "all";
+      $("emptyAll").textContent = state.cat !== "All" ? "Search all categories" : "Show free and paid";
+    }
+    if (!keepScroll) scrollActiveChip();
+  }
+
+  function appendMore() {
+    if (!current || current.rows.length <= state.shown) return;
+    const next = current.rows.slice(state.shown, state.shown + PAGE);
+    state.shown += PAGE;
+    els.list.insertAdjacentHTML("beforeend", next.map(a => row(a, current.toks)).join(""));
+    els.more.hidden = current.rows.length <= state.shown;
+  }
+
+  function scrollActiveChip() {
+    for (const box of [els.cats, els.subs]) {
+      if (box.hidden) continue;
+      const on = box.querySelector('[aria-pressed="true"]');
+      if (!on) continue;
+      const l = on.offsetLeft - box.offsetLeft, w = on.offsetWidth;
+      if (l < box.scrollLeft + 10 || l + w > box.scrollLeft + box.clientWidth - 24)
+        box.scrollTo({left: Math.max(0, l - (box.clientWidth - w) / 2), behavior: "auto"});
+    }
+  }
+
+  function toTop() {
+    const bar = document.getElementById("bar");
+    const y = bar.getBoundingClientRect().top + window.scrollY - 12;
+    if (window.scrollY > y) window.scrollTo({top: y});
+  }
+
+  function setHash() {
+    try { history.replaceState(null, "", state.cat === "All" ? location.pathname + location.search : "#" + slug(state.cat)); } catch (e) {}
+  }
+
+  // ---- honeycomb of popular apps ----
+  function honey() {
+    const top = APPS.filter(a => a.ic).sort((x, y) => x.pop - y.pop);
+    const cell = (a, k) => `<a href="${esc(a.u)}" target="_blank" rel="noopener" style="--k:${k}" aria-label="${esc(a.n)}, opens in the App Store" title="${esc(a.n)}">${icon(a, false)}</a>`;
+    const build = (rows) => { let k = 0; return rows.map(n => `<div class="row">${top.slice(k, k += n).map((a, j) => cell(a, k - n + j)).join("")}</div>`).join(""); };
+    document.querySelector(".honey.sm").innerHTML = build([3, 2]);
+    document.querySelector(".honey.lg").innerHTML = build([4, 5, 4]);
+  }
+
+  // ---- events ----
+  let qTimer = 0;
+  els.q.addEventListener("input", () => {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => {
+      const had = !!state.q.trim();
+      state.q = els.q.value;
+      const has = !!state.q.trim();
+      els.clear.hidden = !els.q.value;
+      const matchOpt = els.sort.querySelector('option[value="match"]');
+      if (has && !had) { matchOpt.hidden = false; state.sort = "match"; }
+      if (!has && had) { matchOpt.hidden = true; state.sort = state.userSort; }
+      syncSort();
+      state.shown = PAGE;
+      render();
+    }, 110);
+  });
+  els.q.addEventListener("keydown", (e) => { if (e.key === "Enter") els.q.blur(); if (e.key === "Escape") clearSearch(); });
+  function clearSearch() {
+    els.q.value = ""; state.q = ""; els.clear.hidden = true;
+    els.sort.querySelector('option[value="match"]').hidden = true;
+    state.sort = state.userSort; syncSort(); state.shown = PAGE; render();
+  }
+  els.clear.addEventListener("click", () => { clearSearch(); els.q.focus(); });
+  $("emptyClear").addEventListener("click", clearSearch);
+  $("emptyAll").addEventListener("click", () => {
+    if (state.cat !== "All") { state.cat = "All"; state.sub = null; setHash(); }
+    else state.price = "all";
+    syncPrice(); state.shown = PAGE; render();
+  });
+  els.sort.addEventListener("change", () => {
+    state.sort = els.sort.value; syncSort();
+    if (state.sort !== "match") { state.userSort = state.sort; savePrefs(); }
+    state.shown = PAGE; render(true); toTop();
+  });
+  els.cats.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cat]"); if (!b) return;
+    state.cat = b.dataset.cat; state.sub = null; state.shown = PAGE; setHash(); render(); toTop();
+  });
+  els.subs.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-sub]"); if (!b) return;
+    state.sub = b.dataset.sub || null; state.shown = PAGE; render(); toTop();
+  });
+  const priceSel = $("price");
+  const SORT_LABEL = {match: "Best match", popular: "Popular", newest: "Newest", updated: "Updated", name: "A–Z"};
+  const PRICE_LABEL = {all: "Any price", free: "Free", paid: "Paid"};
+  function syncPrice() { priceSel.value = state.price; $("priceLabel").textContent = PRICE_LABEL[state.price]; }
+  function syncSort() { els.sort.value = state.sort; $("sortLabel").textContent = SORT_LABEL[state.sort] || "Sort"; }
+  priceSel.addEventListener("change", () => { state.price = priceSel.value; syncPrice(); savePrefs(); state.shown = PAGE; render(true); toTop(); });
+  els.moreBtn.addEventListener("click", appendMore);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((entries) => { if (entries.some(e => e.isIntersecting)) appendMore(); }, {rootMargin: "900px 0px"}).observe(els.more);
+  }
+  window.addEventListener("hashchange", () => {
+    const h = decodeURIComponent(location.hash.slice(1));
+    const c = h === "new" ? "New" : CATS.find(c => slug(c) === h);
+    if (c && c !== state.cat) { state.cat = c; state.sub = null; state.shown = PAGE; render(); }
+  });
+
+  // ---- boot ----
+  els.total.textContent = fmt.format(APPS.length);
+  els.q.placeholder = `Search ${fmt.format(APPS.length)} apps`;
+  syncSort();
+  syncPrice();
+  const when = TODAY.toLocaleDateString("en-US", {month: "long", day: "numeric", year: "numeric"});
+  els.stamp.innerHTML = `<b>Last update:</b> ${when} (${DATA.meta.store} App Store). Prices and ratings change; the App Store page is always current.`;
+  $("updated").querySelector("span").textContent = `Updated daily · last update ${TODAY.toLocaleDateString("en-US", {month: "short", day: "numeric"})}`;
+  honey();
+  render();
+}
+})();
+</script>
+</body>
+</html>
