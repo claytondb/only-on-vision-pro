@@ -1,0 +1,93 @@
+name: Update and publish
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 */4 * * *"   # every 4 hours; the full App Store check runs once a day
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Run the full App Store check now"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: update-and-publish
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    outputs:
+      pages: ${{ steps.pages.outcome == 'success' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/requirements.txt
+
+      - name: Find new Vision Pro apps and refresh the list
+        continue-on-error: true
+        env:
+          # a push publishes quickly; scheduled runs take their time
+          UPDATE_BUDGET_MIN: ${{ github.event_name == 'push' && '15' || '50' }}
+        run: python scripts/update.py ${{ inputs.full && '--full' || '' }}
+
+      - name: Draw share images if missing
+        continue-on-error: true
+        run: python scripts/make_images.py
+
+      - name: Save changes
+        id: save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site state
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            changed=false
+          else
+            git commit -q -m "Update app list ($(date -u +'%Y-%m-%d %H:%M') UTC)"
+            git pull -q --rebase origin main || true
+            git push
+            changed=true
+          fi
+          if [ "$changed" = true ] || [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Keep the schedule switched on
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update.yml/enable"
+
+      # GitHub Pages is optional (the site can live on Vercel instead): skip quietly if it's off
+      - id: pages
+        if: steps.save.outputs.publish == 'true'
+        continue-on-error: true
+        uses: actions/configure-pages@v6
+      - if: steps.pages.outcome == 'success'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  publish:
+    needs: update
+    if: needs.update.outputs.pages == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
