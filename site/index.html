@@ -135,9 +135,11 @@ body{
 .honey{position:absolute;right:0;top:0;display:flex;flex-direction:column;align-items:center;pointer-events:auto}
 .honey .row{display:flex;gap:var(--hg)}
 .honey .row + .row{margin-top:calc(var(--hs) * -0.12)}
-.honey.sm{--hs:31px;--hg:5px;top:22px}
+.honey.sm{--hs:31px;--hg:5px;top:12px}
 .honey.lg{--hs:58px;--hg:10px;display:none;top:4px}
 @media (min-width:720px){.honey.sm{display:none}.honey.lg{display:flex}}
+/* narrow tablets: a smaller 3-4-3 cluster so it never covers the title */
+@media (min-width:720px) and (max-width:859px){.honey.lg{--hs:50px;--hg:8px}.honey.lg .row a:last-child{display:none}}
 @media (max-width:359px){.honey.sm{display:none}}
 .honey a{display:block;border-radius:50%;animation:float 7s ease-in-out infinite;animation-delay:calc(var(--k) * -0.9s)}
 .honey a:focus-visible{outline:2px solid var(--tab);outline-offset:3px}
@@ -361,10 +363,13 @@ function start(DATA) {
   const els = {q:$("q"), clear:$("clear"), sort:$("sort"), cats:$("cats"), subs:$("subs"), count:$("count"),
     list:$("list"), more:$("more"), moreBtn:$("moreBtn"), empty:$("empty"), total:$("total"), stamp:$("stamp")};
 
-  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "'");
+  // character ranges built from code points so the source stays plain ASCII
+  const span = (a, b) => String.fromCharCode(a) + "-" + String.fromCharCode(b);
+  const MARKS = new RegExp("[" + span(0x300, 0x36f) + "]", "g");
+  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(MARKS, "").replace(/[’']/g, "'");
   // word-start matching: "nba" finds "NBA" but not "pinball"; CJK text falls back to substring
   const words = (s) => " " + norm(s).replace(/['’]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim() + " ";
-  const CJK = /[぀-ヿ㐀-鿿가-힯]/;
+  const CJK = new RegExp("[" + span(0x3040, 0x30ff) + span(0x3400, 0x9fff) + span(0xac00, 0xd7af) + "]");
   const has = (hay, t) => CJK.test(t) ? hay.includes(t) : hay.includes(" " + t);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const slug = (s) => norm(s).replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
